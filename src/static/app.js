@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
-  const participantsList = document.getElementById("participants-list");
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -22,10 +21,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Participants list with delete icon
         const participantsHtml =
           details.participants && details.participants.length
-            ? `<ul class="participants-list">${details.participants
-                .map((p) => `<li>${p}</li>`)
+            ? `<ul class="participants-list no-bullets">${details.participants
+                .map(
+                  (p) =>
+                    `<li>${p} <button class="delete-button" data-activity="${name}" data-email="${p}">❌</button></li>`
+                )
                 .join("")}</ul>`
             : `<p class="info">No participants yet</p>`;
 
@@ -47,6 +50,31 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+
+      // Add event listeners to delete buttons
+      document.querySelectorAll(".delete-button").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+          const activity = event.target.getAttribute("data-activity");
+          const email = event.target.getAttribute("data-email");
+
+          try {
+            const deleteResponse = await fetch(
+              `/activities/${encodeURIComponent(activity)}/participants/${encodeURIComponent(email)}`,
+              {
+                method: "DELETE",
+              }
+            );
+
+            if (deleteResponse.ok) {
+              fetchActivities(); // Refresh the activities list
+            } else {
+              console.error("Failed to delete participant");
+            }
+          } catch (error) {
+            console.error("Error deleting participant:", error);
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
@@ -86,6 +114,9 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         messageDiv.classList.add("hidden");
       }, 5000);
+
+      // Refresh activities list to show new participant
+      fetchActivities();
     } catch (error) {
       messageDiv.textContent = "Failed to sign up. Please try again.";
       messageDiv.className = "error";
@@ -94,49 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Function to fetch participants
-  async function fetchParticipants() {
-    try {
-      const response = await fetch("/participants");
-      const participants = await response.json();
-
-      participantsList.innerHTML = ""; // Clear existing participants
-
-      participants.forEach((participant) => {
-        const listItem = document.createElement("li");
-        listItem.innerHTML = `
-          ${participant.name}
-          <button class="delete-button" data-id="${participant.id}">❌</button>
-        `;
-        participantsList.appendChild(listItem);
-      });
-
-      // Add event listeners to delete buttons
-      document.querySelectorAll(".delete-button").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-          const participantId = event.target.getAttribute("data-id");
-
-          try {
-            const deleteResponse = await fetch(`/participants/${participantId}`, {
-              method: "DELETE",
-            });
-
-            if (deleteResponse.ok) {
-              fetchParticipants(); // Refresh the list
-            } else {
-              console.error("Failed to delete participant");
-            }
-          } catch (error) {
-            console.error("Error deleting participant:", error);
-          }
-        });
-      });
-    } catch (error) {
-      console.error("Error fetching participants:", error);
-    }
-  }
-
   // Initialize app
   fetchActivities();
-  fetchParticipants();
 });
