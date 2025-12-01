@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const participantsList = document.getElementById("participants-list");
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -93,6 +94,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Function to fetch participants
+  async function fetchParticipants() {
+    try {
+      const response = await fetch("/participants");
+      const participants = await response.json();
+
+      participantsList.innerHTML = ""; // Clear existing participants
+
+      participants.forEach((participant) => {
+        const listItem = document.createElement("li");
+        listItem.innerHTML = `
+          ${participant.name}
+          <button class="delete-button" data-id="${participant.id}">❌</button>
+        `;
+        participantsList.appendChild(listItem);
+      });
+
+      // Add event listeners to delete buttons
+      document.querySelectorAll(".delete-button").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+          const participantId = event.target.getAttribute("data-id");
+
+          try {
+            const deleteResponse = await fetch(`/participants/${participantId}`, {
+              method: "DELETE",
+            });
+
+            if (deleteResponse.ok) {
+              fetchParticipants(); // Refresh the list
+            } else {
+              console.error("Failed to delete participant");
+            }
+          } catch (error) {
+            console.error("Error deleting participant:", error);
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Error fetching participants:", error);
+    }
+  }
+
   // Initialize app
   fetchActivities();
+  fetchParticipants();
 });
